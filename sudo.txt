@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Locator - Station</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch/dist/geosearch.css" />
+    <script src="https://unpkg.com/leaflet-geosearch/dist/bundle.min.js"></script>
+    <style>
+        #map { height: 700px; margin-top: 10px; }
+        
+        /* Align Exit Navigation button to the left */
+        .input-container {
+            position: absolute;
+            top: 6px;
+            left: 60px; /* Aligned to the left */
+            display: flex;
+            gap: 10px;
+            z-index: 1000; /* Ensures it stays on top of the map */
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-container input, .input-container button {
+            padding: 5px;
+            font-size: 14px;
+            border-radius: 10%;
+        }
+
+        .input-container button {
+            cursor: pointer;
+            background-color: red;
+            color: aliceblue;
+        }
+        
+        /* Popup button styles */
+        .popup-button {
+            padding: 6px 10px;
+            font-size: 13px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s ease-in-out;
+        }
+        .popup-button.navigate {
+            background-color: #28a745;
+            color: white;
+        }
+        .popup-button.exit {
+            background-color: #dc3545;
+            color: white;
+        }
+        .popup-button:hover {
+            transform: scale(1.1);
+            opacity: 0.9;
+        }
+        .popup-button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="input-container">
+        <button onclick="exitNavigation()">Exit Navigation</button>
+    </div>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([11.28154, 77.5974], 13);
+
+        var streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var routingControl;
+        var liveLocation = null;
+        var liveLocationMarker, liveLocationCircle;
+
+        googleStreets = L.tileLayer('http://{s}.google.com/vt?lyrs=m&x={x}&y={y}&z={z}',{
+            maxZoom: 20,
+            subdomains:['mt0','mt1','mt2','mt3']
+        });
+        googleStreets.addTo(map);
+
+        // Define markers for each charging station
+        const chargingStations = [
+        { 
+                lat: 11.291337391217454, 
+                lng: 77.58228616650065, 
+                name: 'Ev Charge Partners Charging Station',
+                address: 'Perundurai, Tamil Nadu 638052',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat: 11.166351973170018, 
+                lng: 77.34663166400522, 
+                name: 'One Plug Charging Station',
+                address: 'Toll Plaza, Pandiya Nagar, near Vijayamangalam Road, Perundurai, Tamil Nadu 638056',
+                imageUrl: 'Ev_image2.png'
+            },
+            { 
+                lat: 11.339974599045485, 
+                lng: 77.72887300883079, 
+                name: 'Ather Grid Charging Station',
+                address: '358/259, Erode Main Rd, Perundurai, Erode, Tamil Nadu 638052',
+                imageUrl: 'Ev_image3.png'
+            },
+            { 
+                lat: 11.302582430107048, 
+                lng: 77.60081564048728, 
+                name: 'Relux Charging Station',
+                address: 'Perundurai, Tamil Nadu 638052',
+                imageUrl: ''
+            },
+            { 
+                lat: 11.325231825796118, 
+                lng: 77.68851127321167, 
+                name: 'Ather Grid Charging Station',
+                address: 'S.F, 9,10, No: 166/2 & 166/2A, Erode - Perundurai Rd, Thindal, Erode, 638012',
+                imageUrl: 'Ev_image5.png'
+            },
+            { 
+                lat: 11.385446652685722, 
+                lng: 77.6465761611292, 
+                name: 'Zeon Charging Station',
+                address: 'Tex Valley, 9JCW+V2 E, NH 544, Salem - Cochin Highway, Chithode, Erode, Tamil Nadu 638102',
+                imageUrl: 'Ev_image6.png'
+            },
+            { 
+                lat: 11.385446652685722, 
+                lng: 77.6465761611292, 
+                name: 'Zeon Charging Station',
+                address: 'Tex Valley, 9JCW+V2 E, NH 544, Salem - Cochin Highway, Chithode, Erode, Tamil Nadu 638102',
+                imageUrl: 'Ev_image6.png'
+            },
+            { 
+                lat: 11.332412498593193,                
+                lng: 77.72661656836422,
+                name: 'Bolt.Earth  Charging Station ',
+                address: '18, Eswaran St, near FIRE SERVICE, Periyar Nagar, Erode, Tamil Nadu 638001 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.34883863875743,
+                lng:  77.72583559715086 ,  
+                name: 'Ather Grid Charging Station ',
+                address: ' Mettur Main Road, 311/I, Rana Nagar Rd, Kuruppanaickenpalayam, erode, Tamil Nadu 638301 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.470587216438494,
+                lng: 77.4325297921282 , 
+                name: 'Ather Grid Charging Station ',
+                address: '383-Erode Main road, SH 15, Kullampalayam, Gobichettipalayam, Erode, Tamil Nadu 638476 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat: 11.51973366848991, 
+                lng: 77.93589225302429, 
+                name: 'Zeon Charging Station ',
+                address: 'Sree Saravana Bhavan, near Salem Toll Gate, Vaikundam, Sankagiri, Tamil Nadu 637103 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.683131672396462,
+                lng: 78.12609866651961 ,  
+                name: 'Tata Power Charging Station ',
+                address: 'M4MG+4CQ, Salem, Tamil Nadu 636004 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.578360151736423,
+                lng: 78.14594675302502, 
+                name: 'Dollar Charging Station ',
+                address: ' Hotel Sai Annapoorna, Sandiyur Attayampatti, Salem, Tamil Nadu 636203 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.655255879101972,  
+                lng:78.16253488001273 , 
+                name: 'Ather Grid Charging Station ',
+                address: 'Hotel Shiv Sai Vihar, 298, First Agraharam Rd, Anna Colony, I Agraharam, Salem, Tamil Nadu 636001 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.66575821976906, 
+                lng: 78.1450779376839 ,
+                name: 'Zeon Charging Station ',
+                address: ' Zibe, GRT Hotel, Parvathipuram, Indian Bank Colony, Arisipalayam, Salem, Tamil Nadu 636009 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.629375036459269, 
+                lng:78.13586491877486 ,  
+                name: 'Ather Grid Chrging Station ',
+                address: ' Shop No 44/2A, Karuttur, near Car De Style, Kondalampatti, Salem, Tamil Nadu 636010 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.662379779713252, 
+                lng:78.16401825117717 ,  
+                name: 'OLA Charging Station ',
+                address: '8, Court Rd, Maravaneri, Salem, Tamil Nadu 636007',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.689713402196338,  
+                lng:78.11113503953291 , 
+                name: 'Tata Power Charging Station',
+                address: 'M4R6+XW8, 3rd St, Anna Nagar, Mamangam, Salem, Tamil Nadu 636302 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.662814288404322,
+                lng: 78.15548701061176 ,  
+                name: 'HELIOS Charging Station ',
+                address: '14 RAJAJI ROAD, 14, Rajaji Rd, Sankar Nagar, Salem, Tamil Nadu 636007 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.755948879573978, 
+                lng:78.05091336467181 ,  
+                name: 'Ather Grid Charging Station ',
+                address: 'NH - 44, Bangalore, to, Salem, Aasai Aasai Anandha Bhavan Delight - Omalur, Highway, Omalur, Tamil Nadu 636455',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.240063042189622,  
+                lng:78.16622166836312  , 
+                name: 'Ather Grid Charging Station ',
+                address: '142E, Salem - Namakkal Rd, Swamy Nagar, Namakkal, Tamil Nadu 637001 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.317840271777065, 
+                lng:78.16418421539616 , 
+                name: 'TATA Power Charging Station ',
+                address: ' 1/134, आय़म्पलायम, Nallipalayam, Tamil Nadu 637003 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:10.849932856140473, 
+                lng: 77.9786276223325, 
+                name: 'Tucker Charging Station ',
+                address: 'Salem - Madurai Rd, Namakkal, Tamil Nadu 637003 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.193427677573148, 
+                lng:78.1050741598368 ,  
+                name: 'Relux Charging Station ',
+                address: 'Hotel Sangeetha, Keerambur Tollgate, to, Salem - Madurai Rd, Salem, Namakkal, Tamil Nadu 637207 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:10.957714255340871, 
+                lng:78.06045568185337 ,  
+                name: 'Zeon Charging Station ',
+                address: 'Subbanna Hotel, Madurai, Byepass Road, Service Rd, L G B Nagar, Karur, Tamil Nadu 639001 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:11.012516414625022, 
+                lng:78.06802015301847 , 
+                name: 'VIA Charging Station ',
+                address: 'Family Restaurant, 2, Semmadai, near 11 to 11, inside Karur, Manmangalam, Tamil Nadu 639006 ',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:10.98174813663473,  
+                lng:78.03062986651157 , 
+                name: 'Electric Vehicle Charging Station ',
+                address: 'X2JJ+J76, Athur, Karur, Tamil Nadu 639002',
+                imageUrl: 'Ev_image1.png'
+            },
+            { 
+                lat:10.97894029846176, 
+                lng:78.06431208185364 ,  
+                name: 'TATA Power Charging Station ',
+                address: 'X3H7+9MQ, Salem Bypass Rd, opposite Spring Field, Periya, Kulathupalayam, Karur, Tamil Nadu 639002 ',
+                imageUrl: 'Ev_image1.png'
+            }
+        ];
+
+        // Add markers with popups
+        chargingStations.forEach(station => {
+            var marker = L.marker([station.lat, station.lng]).addTo(map)
+                .bindPopup(` 
+                 <div>
+                    <strong>${station.name}</strong><br>
+                    ${station.address}<br>
+                    <img src="${station.imageUrl}" alt="Charging Station Image" width="130" style="margin-top: 5px; border-radius: 8px;">
+                    <br>
+                    <button class="popup-button navigate" onclick="navigateFromMarker(${station.lat}, ${station.lng})">Navigate Here</button>
+                    <button class="popup-button exit" onclick="exitNavigation()">Exit</button>
+                    <a href="#">Book_slot</a>
+                 </div>
+                `);
+
+            // Add hover effect for the marker
+            marker.on('mouseover', function () {
+                marker.openPopup(); // Show popup on hover
+            });
+            marker.on('mouseout', function () {
+                marker.openPopup(); // Hide popup when not hovered
+            });
+        });
+
+        // Automatically display live location marker and circle
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                liveLocation = [pos.coords.latitude, pos.coords.longitude];
+                if (liveLocationMarker) map.removeLayer(liveLocationMarker);
+                liveLocationMarker = L.marker(liveLocation).addTo(map).bindPopup("Current location");
+                if (liveLocationCircle) map.removeLayer(liveLocationCircle);
+                liveLocationCircle = L.circle(liveLocation, { radius: pos.coords.accuracy }).addTo(map);
+            },
+            (err) => alert("Unable to get live location: " + err.message),
+            { enableHighAccuracy: true }
+        );
+
+        // Navigation from charging station to live location
+        function navigateFromMarker(markerLat, markerLng) {
+            if (routingControl) map.removeControl(routingControl);
+            if (!liveLocation) {
+                alert("Live location not available.");
+                return;
+            }
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(markerLat, markerLng),
+                    L.latLng(liveLocation[0], liveLocation[1])
+                ],
+                routeWhileDragging: true,
+                lineOptions: { styles: [{ color: 'blue', opacity: 0.7, weight: 8 }] }
+            }).addTo(map);
+        }
+
+        // Exit navigation function
+        function exitNavigation() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+                alert("Navigation exited.");
+            }
+        }
+
+        // Search functionality using GeoSearch
+        const searchControl = new GeoSearch.GeoSearchControl({
+            provider: new GeoSearch.OpenStreetMapProvider(),
+            style: 'bar',
+            autoClose: true,
+            retainZoomLevel: false,
+            searchLabel: 'Search for a place...',
+        });
+        map.addControl(searchControl);
+
+        map.on('geosearch/showlocation', (result) => {
+            map.setView([result.location.y, result.location.x], 15);
+        });
+    </script>
+</body>
+</html>

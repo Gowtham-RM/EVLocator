@@ -1,0 +1,181 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Receipt - EV Charging Booking</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                color: #333;
+            }
+            .container {
+                width: 70%;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            h2 {
+                text-align: center;
+                color: #333;
+                margin-bottom: 20px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }
+            table, th, td {
+                border: 1px solid #ddd;
+            }
+            th, td {
+                padding: 10px;
+                text-align: left;
+            }
+            th {
+                background-color: #f4f4f4;
+            }
+            button {
+                display: block;
+                margin: 20px auto;
+                padding: 10px 20px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                cursor: pointer;
+                border-radius: 5px;
+            }
+            button:hover {
+                background-color: #218838;
+            }
+            .success-message {
+                text-align: center;
+                background-color: #d4edda;
+                color: #155724;
+                padding: 10px;
+                margin-bottom: 20px;
+                border-radius: 5px;
+            }
+            .info-message {
+                text-align: center;
+                background-color: #d1ecf1;
+                color: #0c5460;
+                padding: 10px;
+                margin-bottom: 20px;
+                border-radius: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <!-- Info Message for successful booking -->
+            <div id="infoMessage" class="info-message" style="display: none;">
+                <strong>Success!</strong> Your slot booking was successful. Now you can download your receipt.
+            </div>
+
+            <h2>EV Charging Station Booking Receipt</h2>
+            <table id="bookingTable">
+                <tr><th>Vehicle Booking ID</th><td id="vehicleBookingId">Loading...</td></tr>
+                <tr><th>Vehicle ID</th><td id="vehicleId">Loading...</td></tr>
+                <tr><th>Vehicle Type</th><td id="vehicleType">Loading...</td></tr>
+                <tr><th>Make and Model</th><td id="makeModel">Loading...</td></tr>
+                <tr><th>Booking Date</th><td id="bookingDate">Loading...</td></tr>
+                <tr><th>Time Slot</th><td id="timeSlot">Loading...</td></tr>
+                <tr><th>Charging Type</th><td id="chargingType">Loading...</td></tr>
+                <tr><th>Phone Number</th><td id="phoneNumber">Loading...</td></tr>
+                <tr><th>Email</th><td id="email">Loading...</td></tr>
+            </table>
+
+            <!-- Book Now Button -->
+            <button id="bookNowButton">Book Now</button>
+
+            <!-- Download Receipt Button -->
+            <button id="downloadReceiptButton" style="display:none;" onclick="generatePDF()">Download Receipt as PDF</button>
+        </div>
+
+        <script>
+            window.onload = function () {
+                const bookingId = new URLSearchParams(window.location.search).get('id'); // Get the booking ID from URL
+                if (!bookingId) {
+                    alert('Booking ID is missing!');
+                    return;
+                }
+
+                // Fetch the booking data from the server
+                fetch(`get_booking.php?id=${bookingId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            alert('No booking data found!');
+                            return;
+                        }
+
+                        document.getElementById('vehicleBookingId').innerText = data.slot_id || "N/A";
+                        document.getElementById('vehicleId').innerText = data.vehicle_id || "N/A";
+                        document.getElementById('vehicleType').innerText = data.ev_type || "N/A";
+                        document.getElementById('makeModel').innerText = data.ev_make || "N/A";
+                        document.getElementById('bookingDate').innerText = data.booking_date || "N/A";
+                        document.getElementById('timeSlot').innerText = data.time_slot || "N/A";
+                        document.getElementById('chargingType').innerText = data.charging_type || "N/A";
+                        document.getElementById('phoneNumber').innerText = data.phone_number || "N/A";
+                        document.getElementById('email').innerText = data.email || "N/A";
+                    })
+                    .catch(error => {
+                        alert('Failed to fetch booking details.');
+                        console.error('Error fetching data:', error);
+                    });
+            };
+
+            // Handle 'Book Now' button click
+            document.getElementById('bookNowButton').addEventListener('click', function () {
+                // Show the success message and the "Download Receipt" button
+                document.getElementById('infoMessage').style.display = 'block';
+                document.getElementById('downloadReceiptButton').style.display = 'inline-block';
+                // Disable the "Book Now" button to prevent further clicks
+                document.getElementById('bookNowButton').disabled = true;
+                document.getElementById('bookNowButton').style.backgroundColor = '#ccc'; // Optional: change color to indicate disabled
+            });
+
+            function generatePDF() {
+                const bookingId = new URLSearchParams(window.location.search).get('id'); // Get the booking ID from URL
+
+                const vehicleBookingId = document.getElementById('vehicleBookingId').innerText;
+                const vehicleId = document.getElementById('vehicleId').innerText;
+                const vehicleType = document.getElementById('vehicleType').innerText;
+                const makeModel = document.getElementById('makeModel').innerText;
+                const bookingDate = document.getElementById('bookingDate').innerText;
+                const timeSlot = document.getElementById('timeSlot').innerText;
+                const chargingType = document.getElementById('chargingType').innerText;
+                const phoneNumber = document.getElementById('phoneNumber').innerText;
+                const email = document.getElementById('email').innerText;
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setFont("Arial", "normal");
+                doc.text("EV Charging Station Booking Receipt", 105, 20, null, null, 'center');
+                doc.text(`Booking ID: ${bookingId}`, 20, 30);
+                doc.text(`Vehicle Booking ID: ${vehicleBookingId}`, 20, 40);
+                doc.text(`Vehicle ID: ${vehicleId}`, 20, 50);
+                doc.text(`Vehicle Type: ${vehicleType}`, 20, 60);
+                doc.text(`Make and Model: ${makeModel}`, 20, 70);
+                doc.text(`Booking Date: ${bookingDate}`, 20, 80);
+                doc.text(`Time Slot: ${timeSlot}`, 20, 90);
+                doc.text(`Charging Type: ${chargingType}`, 20, 100);
+                doc.text(`Phone Number: ${phoneNumber}`, 20, 110);
+                doc.text(`Email: ${email}`, 20, 120);
+                doc.text("Thank you for booking with us!", 105, 130, null, null, 'center');
+
+                doc.save(`Receipt_${bookingId}.pdf`);
+            }
+        </script>
+    </body>
+    </html>
