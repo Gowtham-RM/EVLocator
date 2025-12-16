@@ -7,10 +7,11 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $conn->real_escape_string($_POST["username"]); //login
-    $password = $_POST["password"];
+  // Use email for login to match the signup flow
+  $email = $conn->real_escape_string($_POST["email"]);
+  $password = $_POST["password"];
 
-    $sql = "SELECT * FROM users WHERE username = '$username'";
+  $sql = "SELECT * FROM users WHERE email = '$email'";
     $result = $conn->query($sql);
 
     if ($result->num_rows == 1) {
@@ -145,8 +146,8 @@ $conn->close();
           <div class="card-body">
             <form action="loginhtml.php" method="post">
               <div class="mb-3">
-                <label for="username" class="form-label">Name:</label>
-                <input type="text" class="form-control" name="username" id="username" required>
+                <label for="email" class="form-label">Email:</label>
+                <input type="email" class="form-control" name="email" id="email" required>
               </div>
               <div class="mb-3">
                 <label for="password" class="form-label">Password:</label>
