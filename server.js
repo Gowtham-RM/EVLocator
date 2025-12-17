@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
@@ -7,50 +7,54 @@ app.use(cors());
 app.use(express.json());
 
 // Database connection - uses environment variables for production
-const db = mysql.createConnection({
+const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
+  user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || 'charging_stations_db',
-  port: process.env.DB_PORT || 3306
+  port: process.env.DB_PORT || 5432,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
-db.connect((err) => {
+// Test database connection
+pool.connect((err, client, release) => {
   if (err) {
     console.error('Database connection failed:', err);
     return;
   }
-  console.log('Connected to database.');
+  console.log('Connected to PostgreSQL database.');
+  release();
 });
 
 // Fetch all charging stations
-app.get('/api/charging-stations', (req, res) => {
-  const query = 'SELECT * FROM charging_stations';
-  db.query(query, (err, results) => {
-    if (err) {
-      res.status(500).send('Error fetching data.');
-      return;
-    }
-    res.json(results);
-  });
+app.get('/api/charging-stations', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM charging_stations';
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching data.');
+  }
 });
 
 // Add a new charging station
-app.post('/api/add-charging-station', (req, res) => {
+app.post('/api/add-charging-station', async (req, res) => {
   const { latitude, longitude, name, address, image_url } = req.body;
 
-  const query = `
-    INSERT INTO charging_stations (latitude, longitude, name, address, image_url) 
-    VALUES (?, ?, ?, ?, ?)
-  `;
+  try {
+    const query = `
+      INSERT INTO charging_stations (latitude, longitude, name, address, image_url) 
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
 
-  db.query(query, [latitude, longitude, name, address, image_url], (err, results) => {
-    if (err) {
-      res.status(500).send('Error inserting data.');
-      return;
-    }
-    res.send('Charging station added successfully.');
-  });
+    const result = await pool.query(query, [latitude, longitude, name, address, image_url]);
+    res.json({ message: 'Charging station added successfully.', data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error inserting data.');
+  }
 });
 
 // Start server
