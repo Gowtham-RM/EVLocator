@@ -1,14 +1,17 @@
 {
-  "name": "design-pro",
+  "name": "evlocator",
   "version": "1.0.0",
-  "main": "one.js",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "EV Charging Station Locator",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.1",

@@ -1,0 +1,26 @@
+services:
+  # Web Service (Node.js Backend)
+  - type: web
+    name: evlocator-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: 3306
+
+  # MySQL Database
+  - type: pserv
+    name: evlocator-db
+    runtime: docker
+    plan: free
+    env: docker
+    dockerfilePath: ./Dockerfile.mysql

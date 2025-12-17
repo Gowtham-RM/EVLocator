@@ -6,12 +6,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database connection
+// Database connection - uses environment variables for production
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: "",
-  database: 'charging_stations_db'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || 'charging_stations_db',
+  port: process.env.DB_PORT || 3306
 });
 
 db.connect((err) => {
@@ -53,7 +54,7 @@ app.post('/api/add-charging-station', (req, res) => {
 });
 
 // Start server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
