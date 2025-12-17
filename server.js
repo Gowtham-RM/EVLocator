@@ -6,15 +6,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database connection - uses environment variables for production
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || 'charging_stations_db',
-  port: process.env.DB_PORT || 5432,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-});
+// Database connection - supports DATABASE_URL or individual variables
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || "",
+        database: process.env.DB_NAME || 'charging_stations_db',
+        port: process.env.DB_PORT || 5432,
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+      }
+);
 
 // Test database connection
 pool.connect((err, client, release) => {
