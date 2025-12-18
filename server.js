@@ -6,6 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Basic health endpoint
+app.get('/', (req, res) => {
+  res.send('API running. Try GET /api/charging-stations');
+});
+
 // Database connection - supports DATABASE_URL or individual variables
 const pool = new Pool(
   process.env.DATABASE_URL
