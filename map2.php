@@ -92,7 +92,8 @@
     googleStreets.addTo(map);
 
     // Fetch charging station data from your backend API
-    fetch('http://localhost:3003/api/charging-stations')
+    const API_BASE_URL = window.API_BASE_URL || 'https://evlocator-backend.onrender.com';
+    fetch(`${API_BASE_URL}/api/charging-stations`)
         .then(response => response.json())
         .then(data => {
             // Store the fetched data in the global chargingStations array

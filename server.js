@@ -1,75 +1,57 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
+// server.js - API backed by PostgreSQL
+const express = require("express");
+const { Pool } = require("pg");
+const cors = require("cors");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Basic health endpoint
-app.get('/', (req, res) => {
-  res.send('API running. Try GET /api/charging-stations');
-});
-
-// Database connection - supports DATABASE_URL or individual variables
 const pool = new Pool(
   process.env.DATABASE_URL
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
-      }
+    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
     : {
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'postgres',
+        host: process.env.DB_HOST || "localhost",
+        user: process.env.DB_USER || "postgres",
         password: process.env.DB_PASSWORD || "",
-        database: process.env.DB_NAME || 'charging_stations_db',
+        database: process.env.DB_NAME || "charging_stations_db",
         port: process.env.DB_PORT || 5432,
-        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+        ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false
       }
 );
 
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-    return;
-  }
-  console.log('Connected to PostgreSQL database.');
-  release();
+app.get("/", (req, res) => {
+  res.send("API running. Try GET /api/charging-stations");
 });
 
-// Fetch all charging stations
-app.get('/api/charging-stations', async (req, res) => {
+app.get("/api/charging-stations", async (req, res) => {
   try {
-    const query = 'SELECT * FROM charging_stations';
-    const result = await pool.query(query);
+    const result = await pool.query("SELECT * FROM charging_stations");
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error fetching data.');
+    console.error("Error fetching data:", err);
+    res.status(500).send("Error fetching data.");
   }
 });
 
-// Add a new charging station
-app.post('/api/add-charging-station', async (req, res) => {
+app.post("/api/add-charging-station", async (req, res) => {
   const { latitude, longitude, name, address, image_url } = req.body;
 
   try {
-    const query = `
-      INSERT INTO charging_stations (latitude, longitude, name, address, image_url) 
+    const insertQuery = `
+      INSERT INTO charging_stations (latitude, longitude, name, address, image_url)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
+      RETURNING *;
     `;
 
-    const result = await pool.query(query, [latitude, longitude, name, address, image_url]);
-    res.json({ message: 'Charging station added successfully.', data: result.rows[0] });
+    const result = await pool.query(insertQuery, [latitude, longitude, name, address, image_url]);
+    res.json({ message: "Charging station added successfully.", data: result.rows[0] });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error inserting data.');
+    console.error("Error inserting data:", err);
+    res.status(500).send("Error inserting data.");
   }
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
