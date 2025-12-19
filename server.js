@@ -27,7 +27,17 @@ app.get("/", (req, res) => {
 app.get("/api/charging-stations", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM charging_stations");
-    res.json(result.rows);
+
+    const stations = result.rows.map((row) => ({
+      lat: Number(row.latitude),
+      lng: Number(row.longitude),
+      name: row.name,
+      address: row.address || "",
+      connectors: row.connectors || "Connectors not specified",
+      image_url: row.image_url || null
+    }));
+
+    res.json(stations);
   } catch (err) {
     console.error("Error fetching data:", err);
     res.status(500).send("Error fetching data.");
@@ -35,17 +45,28 @@ app.get("/api/charging-stations", async (req, res) => {
 });
 
 app.post("/api/add-charging-station", async (req, res) => {
-  const { latitude, longitude, name, address, image_url } = req.body;
+  const { latitude, longitude, name, address, image_url, connectors } = req.body;
 
   try {
     const insertQuery = `
-      INSERT INTO charging_stations (latitude, longitude, name, address, image_url)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO charging_stations (latitude, longitude, name, address, image_url, connectors)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
 
-    const result = await pool.query(insertQuery, [latitude, longitude, name, address, image_url]);
-    res.json({ message: "Charging station added successfully.", data: result.rows[0] });
+    const result = await pool.query(insertQuery, [latitude, longitude, name, address, image_url, connectors]);
+
+    const row = result.rows[0];
+    const station = {
+      lat: Number(row.latitude),
+      lng: Number(row.longitude),
+      name: row.name,
+      address: row.address || "",
+      connectors: row.connectors || "Connectors not specified",
+      image_url: row.image_url || null
+    };
+
+    res.json({ message: "Charging station added successfully.", data: station });
   } catch (err) {
     console.error("Error inserting data:", err);
     res.status(500).send("Error inserting data.");
