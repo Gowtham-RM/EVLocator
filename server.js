@@ -26,15 +26,17 @@ app.get("/", (req, res) => {
 
 app.get("/api/charging-stations", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM charging_stations");
+    const result = await pool.query(
+      "SELECT st_name, st_loc, latitude, longitude, connectors FROM public.evadmin ORDER BY st_name"
+    );
 
     const stations = result.rows.map((row) => ({
       lat: Number(row.latitude),
       lng: Number(row.longitude),
-      name: row.name,
-      address: row.address || "",
+      name: row.st_name,
+      address: row.st_loc,
       connectors: row.connectors || "Connectors not specified",
-      image_url: row.image_url || null
+      image_url: null
     }));
 
     res.json(stations);
@@ -45,25 +47,25 @@ app.get("/api/charging-stations", async (req, res) => {
 });
 
 app.post("/api/add-charging-station", async (req, res) => {
-  const { latitude, longitude, name, address, image_url, connectors } = req.body;
+  const { latitude, longitude, name, address, connectors } = req.body;
 
   try {
     const insertQuery = `
-      INSERT INTO charging_stations (latitude, longitude, name, address, image_url, connectors)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *;
+      INSERT INTO public.evadmin (st_name, st_loc, latitude, longitude, connectors)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING st_name, st_loc, latitude, longitude, connectors;
     `;
 
-    const result = await pool.query(insertQuery, [latitude, longitude, name, address, image_url, connectors]);
+    const result = await pool.query(insertQuery, [name, address, latitude, longitude, connectors]);
 
     const row = result.rows[0];
     const station = {
       lat: Number(row.latitude),
       lng: Number(row.longitude),
-      name: row.name,
-      address: row.address || "",
+      name: row.st_name,
+      address: row.st_loc,
       connectors: row.connectors || "Connectors not specified",
-      image_url: row.image_url || null
+      image_url: null
     };
 
     res.json({ message: "Charging station added successfully.", data: station });
