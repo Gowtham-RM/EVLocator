@@ -13,6 +13,7 @@ function get_db_connection(): PDO
         if (str_starts_with($cleanUrl, 'psql ')) {
             $cleanUrl = substr($cleanUrl, 5);
         }
+        $cleanUrl = trim($cleanUrl);
         $cleanUrl = trim($cleanUrl, "'\"");
         $parts = parse_url($cleanUrl);
         if ($parts === false) {
