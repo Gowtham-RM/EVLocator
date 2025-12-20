@@ -15,6 +15,16 @@ services:
         value: "true"
       - key: DB_PORT
         value: 5432
+  # Web Service (PHP Frontend) on free tier
+  - type: web
+    name: evlocator-frontend
+    runtime: php
+    plan: free
+    buildCommand: ""
+    startCommand: php -S 0.0.0.0:$PORT -t .
+    envVars:
+      - key: API_BASE_URL
+        value: https://evlocator.onrender.com
 
 databases:
   # Free Render PostgreSQL instance
