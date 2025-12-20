@@ -1,5 +1,4 @@
-
-    <?php
+<?php
     // Start the session at the very beginning of the file
     session_start();
     $isLoggedIn = isset($_SESSION['username']);
