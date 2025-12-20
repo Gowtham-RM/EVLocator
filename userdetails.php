@@ -1,23 +1,18 @@
 <?php
-// Database connection details
-$host = "localhost";
-$dbname = "ev_charge_loc";
-$username = "root"; // Replace with your database username
-$password = ""; // Replace with your database password
+require_once __DIR__ . '/db.php';
 
 try {
-    // Establish a connection to the database
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    $pdo = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
-// Fetch user data
 try {
     $stmt = $pdo->query("SELECT * FROM users");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
+    $users = $stmt->fetchAll();
+} catch (Throwable $e) {
     die("Failed to fetch data: " . $e->getMessage());
 }
 ?>

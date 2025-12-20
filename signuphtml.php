@@ -1,41 +1,56 @@
 <?php
-// Database connection
-$conn = new mysqli("localhost", "root", "", "ev_charge_loc");
+require_once __DIR__ . '/db.php';
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+  $conn = get_db_connection();
+} catch (RuntimeException $e) {
+  error_log($e->getMessage());
+  echo "<script>alert('Service temporarily unavailable. Please try again later.'); window.history.back();</script>";
+  exit;
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $username = $conn->real_escape_string($_POST["username"]);
-  $email = $conn->real_escape_string($_POST["email"]);
-  $password = password_hash($_POST["password"], PASSWORD_BCRYPT); // Secure password hashing
-  $vehicle_type = $conn->real_escape_string($_POST["vehicle_type"]);
-  $connector_type = $conn->real_escape_string($_POST["connector_type"]);
-  $city = $conn->real_escape_string($_POST["city"]);
-  $state = $conn->real_escape_string($_POST["state"]);
-  $zip = $conn->real_escape_string($_POST["zip"]);
+  $username = trim($_POST["username"] ?? '');
+  $email = trim($_POST["email"] ?? '');
+  $passwordHash = password_hash($_POST["password"] ?? '', PASSWORD_BCRYPT);
+  $vehicle_type = trim($_POST["vehicle_type"] ?? '');
+  $connector_type = trim($_POST["connector_type"] ?? '');
+  $city = trim($_POST["city"] ?? '');
+  $state = trim($_POST["state"] ?? '');
+  $zip = trim($_POST["zip"] ?? '');
 
-  // Check if email already exists
-  $checkEmail = $conn->query("SELECT id FROM users WHERE email = '$email'");
-  if ($checkEmail->num_rows > 0) {
-      echo "<script>alert('Email already exists. Please use another email.');</script>";
+  $checkEmail = $conn->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+  $checkEmail->execute([':email' => $email]);
+
+  if ($checkEmail->fetch()) {
+    echo "<script>alert('Email already exists. Please use another email.');</script>";
   } else {
-      $sql = "INSERT INTO users (username, email, password, vehicle_type, connector_type, city, state, zip)
-              VALUES ('$username', '$email', '$password', '$vehicle_type', '$connector_type', '$city', '$state', '$zip')";
-      if ($conn->query($sql) === TRUE) {
-          echo "<script>
-                  alert('Registration successful! Redirecting to login page.');
-                  window.location.href = 'loginhtml.php';
-                </script>";
-      } else {
-          echo "<script>alert('Error: " . $conn->error . "');</script>";
-      }
+    $stmt = $conn->prepare(
+      "INSERT INTO users (username, email, password, vehicle_type, connector_type, city, state, zip)
+       VALUES (:username, :email, :password, :vehicle_type, :connector_type, :city, :state, :zip)"
+    );
+
+    if ($stmt->execute([
+      ':username' => $username,
+      ':email' => $email,
+      ':password' => $passwordHash,
+      ':vehicle_type' => $vehicle_type,
+      ':connector_type' => $connector_type,
+      ':city' => $city,
+      ':state' => $state,
+      ':zip' => $zip,
+    ])) {
+      echo "<script>
+          alert('Registration successful! Redirecting to login page.');
+          window.location.href = 'loginhtml.php';
+        </script>";
+    } else {
+      echo "<script>alert('Registration failed. Please try again.');</script>";
+    }
   }
 }
 
-
-$conn->close();
+$conn = null;
 ?>
 
 <!DOCTYPE html>

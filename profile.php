@@ -1,21 +1,26 @@
 <?php
-// Include database connection
-include 'db_connect.php';
+require_once __DIR__ . '/db.php';
 
-// Assuming you're using a session or passing the user id via GET
 session_start();
-$user_id = $_SESSION['user_id']; // Example: Fetching user_id from session
+$user_id = $_SESSION['user_id'] ?? null;
 
-// Fetch user details
-$sql = "SELECT * FROM users WHERE id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
+if (!$user_id) {
+    exit('User not authenticated.');
+}
 
-// Check if user exists
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
+}
+
+$stmt = $conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+$stmt->execute([':id' => $user_id]);
+$row = $stmt->fetch();
+
+if ($row) {
     ?>
 
     <!DOCTYPE html>
@@ -46,10 +51,10 @@ if ($result->num_rows > 0) {
     </html>
 
     <?php
-} else {
-    echo "User not found.";
-}
+    } else {
+        echo "User not found.";
+    }
 
-$stmt->close();
-$conn->close();
-?>
+    $stmt = null;
+    $conn = null;
+    ?>

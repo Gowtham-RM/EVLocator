@@ -1,47 +1,40 @@
 <?php
-// Database connection
-$conn = new mysqli("localhost", "root", "", "ev_charge_loc");
+require_once __DIR__ . '/db.php';
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+  $conn = get_db_connection();
+} catch (RuntimeException $e) {
+  error_log($e->getMessage());
+  echo "<script>alert('Service temporarily unavailable. Please try again later.'); window.history.back();</script>";
+  exit;
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  // Use email for login to match the signup flow
-  $email = $conn->real_escape_string($_POST["email"]);
-  $password = $_POST["password"];
+  $email = trim($_POST["email"] ?? '');
+  $password = $_POST["password"] ?? '';
 
-  $sql = "SELECT * FROM users WHERE email = '$email'";
-    $result = $conn->query($sql);
+  $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+  $stmt->execute([':email' => $email]);
+  $user = $stmt->fetch();
 
-    if ($result->num_rows == 1) {
-        $user = $result->fetch_assoc();
-        if (password_verify($password, $user["password"])) {
-            // Start session and set session variables
-            session_start();
-            $_SESSION["user_id"] = $user["id"];
-            $_SESSION["username"] = $user["username"];
+  if ($user && password_verify($password, $user["password"])) {
+    session_start();
+    $_SESSION["user_id"] = $user["id"];
+    $_SESSION["username"] = $user["username"];
 
-            // Send alert and redirect using JavaScript
-            echo "<script>
-                window.location.href = 'home.php';
-                </script>";
-            exit;
-        } else {
-            echo "<script>
-                alert('Invalid password. Please try again.');
-                window.history.back();
-                </script>";
-        }
-    } else {
-        echo "<script>
-            alert('No user found with this email.');
-            window.history.back();
-            </script>";
-    }
+    echo "<script>
+      window.location.href = 'home.php';
+      </script>";
+    exit;
+  }
+
+  echo "<script>
+    alert('Invalid credentials. Please try again.');
+    window.history.back();
+    </script>";
 }
 
-$conn->close();
+$conn = null;
 ?>
 
 <!DOCTYPE html>

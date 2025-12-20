@@ -24,6 +24,10 @@ services:
     envVars:
       - key: API_BASE_URL
         value: https://evlocator.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: evlocator-db
+          property: connectionString
 
 databases:
   # Free Render PostgreSQL instance

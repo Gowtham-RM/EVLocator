@@ -1,30 +1,20 @@
 <?php
+require_once __DIR__ . '/db.php';
+
 // Backend logic for database connection and data fetching
-
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
 // Fetch data if it's an AJAX request
 if (isset($_GET['fetch_stations'])) {
     $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin";
     $result = $conn->query($sql);
-
-    $stations = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $stations[] = $row;
-        }
-    }
+    $stations = $result->fetchAll();
 
     // Output JSON for AJAX
     header('Content-Type: application/json');
@@ -34,105 +24,40 @@ if (isset($_GET['fetch_stations'])) {
 
 // Handle delete request
 if (isset($_GET['delete_station'])) {
-    $id = $_GET['delete_station'];
-    $deleteQuery = "DELETE FROM evadmin WHERE id = ?";
+    $id = (int) $_GET['delete_station'];
+    $deleteQuery = "DELETE FROM evadmin WHERE id = :id";
     $stmt = $conn->prepare($deleteQuery);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute([':id' => $id]);
     echo json_encode(['success' => true]);
     exit;
 }
 
 // Handle edit request
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_station'])) {
-    $id = $_POST['station-id'];
-    $name = $_POST['station-name'];
-    $location = $_POST['station-location'];
-    $latitude = $_POST['latitude'];
-    $longitude = $_POST['longitude'];
-    $connectors = $_POST['connector-types'];
+    $id = (int) ($_POST['station-id'] ?? 0);
+    $name = trim($_POST['station-name'] ?? '');
+    $location = trim($_POST['station-location'] ?? '');
+    $latitude = trim($_POST['latitude'] ?? '');
+    $longitude = trim($_POST['longitude'] ?? '');
+    $connectors = trim($_POST['connector-types'] ?? '');
 
-    $updateQuery = "UPDATE evadmin SET st_name = ?, st_loc = ?, latitude = ?, longitude = ?, connectors = ? WHERE id = ?";
+    $updateQuery = "UPDATE evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors WHERE id = :id";
     $stmt = $conn->prepare($updateQuery);
-    $stmt->bind_param("sssssi", $name, $location, $latitude, $longitude, $connectors, $id);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute([
+        ':name' => $name,
+        ':loc' => $location,
+        ':lat' => $latitude,
+        ':lng' => $longitude,
+        ':connectors' => $connectors,
+        ':id' => $id,
+    ]);
 
     header("Location: station.php"); // Redirect back to the station page
     exit;
 }
 
 // Close the database connection
-$conn->close();
-?>
-<?php
-// Backend logic for database connection and data fetching
-
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Fetch data if it's an AJAX request
-if (isset($_GET['fetch_stations'])) {
-    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin";
-    $result = $conn->query($sql);
-
-    $stations = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $stations[] = $row;
-        }
-    }
-
-    // Output JSON for AJAX
-    header('Content-Type: application/json');
-    echo json_encode($stations);
-    exit; // Stop further processing for AJAX requests
-}
-
-// Handle delete request
-if (isset($_GET['delete_station'])) {
-    $id = $_GET['delete_station'];
-    $deleteQuery = "DELETE FROM evadmin WHERE id = ?";
-    $stmt = $conn->prepare($deleteQuery);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->close();
-    echo json_encode(['success' => true]);
-    exit;
-}
-
-// Handle edit request
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_station'])) {
-    $id = $_POST['station-id'];
-    $name = $_POST['station-name'];
-    $location = $_POST['station-location'];
-    $latitude = $_POST['latitude'];
-    $longitude = $_POST['longitude'];
-    $connectors = $_POST['connector-types'];
-
-    $updateQuery = "UPDATE evadmin SET st_name = ?, st_loc = ?, latitude = ?, longitude = ?, connectors = ? WHERE id = ?";
-    $stmt = $conn->prepare($updateQuery);
-    $stmt->bind_param("sssssi", $name, $location, $latitude, $longitude, $connectors, $id);
-    $stmt->execute();
-    $stmt->close();
-
-    header("Location: station.php"); // Redirect back to the station page
-    exit;
-}
-
-// Close the database connection
-$conn->close();
+$conn = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">

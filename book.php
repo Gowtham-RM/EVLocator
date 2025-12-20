@@ -1,61 +1,60 @@
 <?php
-// Database connection settings
-$servername = "localhost";
-$username = "root";
-$password = ""; // Your MySQL root password
-$dbname = "ev_charge_loc";
+require_once __DIR__ . '/db.php';
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get form data
-    $vehicle_type = $_POST['vehicle_type'];
-    $vehicle_make = $_POST['vehicle_make'];
-    $booking_date = $_POST['booking_date'];
-    $time_slot = $_POST['time_slot'];
-    $charging_type = $_POST['charging_type'];
-    $phone_number = $_POST['phone_number'];
-    $email = $_POST['email'];
+    $vehicle_type = trim($_POST['vehicle_type'] ?? '');
+    $vehicle_make = trim($_POST['vehicle_make'] ?? '');
+    $booking_date = $_POST['booking_date'] ?? '';
+    $time_slot = trim($_POST['time_slot'] ?? '');
+    $charging_type = trim($_POST['charging_type'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
+    $email = trim($_POST['email'] ?? '');
 
-    // Check if a booking already exists for the same phone number or email in the given time slot and date
-    $stmt = $conn->prepare("SELECT * FROM slot WHERE (phone_number = ? OR email = ?) AND booking_date = ? AND time_slot = ?");
-    $stmt->bind_param("ssss", $phone_number, $email, $booking_date, $time_slot);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt = $conn->prepare(
+        "SELECT 1 FROM slot WHERE (phone_number = :phone OR email = :email) AND booking_date = :date AND time_slot = :slot LIMIT 1"
+    );
+    $stmt->execute([
+        ':phone' => $phone_number,
+        ':email' => $email,
+        ':date' => $booking_date,
+        ':slot' => $time_slot,
+    ]);
 
-    if ($result->num_rows > 0) {
+    if ($stmt->fetch()) {
         echo "<script>alert('You have already made a booking for this time slot. Please choose a different time or modify your existing booking.');</script>";
     } else {
-        $stmt = $conn->prepare("INSERT INTO slot 
-            (ev_type, ev_make, booking_date, time_slot, charging_type, phone_number, email) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param(
-            "sssssss",
-            $vehicle_type,
-            $vehicle_make,
-            $booking_date,
-            $time_slot,
-            $charging_type,
-            $phone_number,
-            $email
+        $stmt = $conn->prepare(
+            "INSERT INTO slot (ev_type, ev_make, booking_date, time_slot, charging_type, phone_number, email)
+             VALUES (:ev_type, :ev_make, :booking_date, :time_slot, :charging_type, :phone_number, :email)
+             RETURNING slot_id"
         );
 
-        if ($stmt->execute()) {
-            $slot_id = $stmt->insert_id;
-            $formatted_slot_id = str_pad($slot_id, 4, '0', STR_PAD_LEFT);
+        if ($stmt->execute([
+            ':ev_type' => $vehicle_type,
+            ':ev_make' => $vehicle_make,
+            ':booking_date' => $booking_date,
+            ':time_slot' => $time_slot,
+            ':charging_type' => $charging_type,
+            ':phone_number' => $phone_number,
+            ':email' => $email,
+        ])) {
+            $slot_id = (int) $stmt->fetchColumn();
+            $formatted_slot_id = str_pad((string) $slot_id, 4, '0', STR_PAD_LEFT);
             header("Location: book.php?id=$formatted_slot_id");
             exit();
         } else {
-            echo "Error: " . $stmt->error;
+            echo "Error: Unable to save booking.";
         }
-        $stmt->close();
     }
 }
 
@@ -63,21 +62,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 if (isset($_GET['id'])) {
     $slot_id = $_GET['id'];
 
-    $stmt = $conn->prepare("SELECT * FROM slot WHERE slot_id = ?");
-    $stmt->bind_param("i", $slot_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-    } else {
-        $row = null;
-    }
-
-    $stmt->close();
+    $stmt = $conn->prepare("SELECT * FROM slot WHERE slot_id = :id");
+    $stmt->execute([':id' => $slot_id]);
+    $row = $stmt->fetch() ?: null;
 }
 
-$conn->close();
+$conn = null;
 ?>
 
 <!DOCTYPE html>

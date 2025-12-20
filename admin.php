@@ -1,58 +1,61 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";
+require_once __DIR__ . '/db.php';
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+  $conn = get_db_connection();
+} catch (RuntimeException $e) {
+  error_log($e->getMessage());
+  http_response_code(500);
+  exit('Database connection unavailable.');
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Collect form data
-    $id = $_POST['station-id'];
-    $name = $_POST['station-name'];
-    $location = $_POST['station-location'];
-    $latitude = $_POST['latitude'];
-    $longitude = $_POST['longitude'];
-    $connectors = $_POST['connector-types'];
+  $id = (int) ($_POST['station-id'] ?? 0);
+  $name = trim($_POST['station-name'] ?? '');
+  $location = trim($_POST['station-location'] ?? '');
+  $latitude = trim($_POST['latitude'] ?? '');
+  $longitude = trim($_POST['longitude'] ?? '');
+  $connectors = trim($_POST['connector-types'] ?? '');
 
-    // Check for duplicate entry (matching `id` or `latitude`/`longitude`)
-    $checkQuery = "SELECT * FROM evadmin WHERE id = ? OR (latitude = ? AND longitude = ?)";
-    $stmt = $conn->prepare($checkQuery);
-    $stmt->bind_param("iss", $id, $latitude, $longitude);
-    $stmt->execute();
-    $result = $stmt->get_result();
+  $checkQuery = "SELECT 1 FROM evadmin WHERE id = :id OR (latitude = :lat AND longitude = :lng) LIMIT 1";
+  $stmt = $conn->prepare($checkQuery);
+  $stmt->execute([
+    ':id' => $id,
+    ':lat' => $latitude,
+    ':lng' => $longitude,
+  ]);
 
-    if ($result->num_rows > 0) {
+  if ($stmt->fetch()) {
         // Duplicate found
         echo "<script>alert('The ID or Latitude/Longitude combination already exists. Check it!');</script>";
     } else {
         // Use prepared statement to insert data into the database
-        $insertQuery = "INSERT INTO evadmin (id, st_name, st_loc, latitude, longitude, connectors) VALUES (?, ?, ?, ?, ?, ?)";
-        $insertStmt = $conn->prepare($insertQuery);
-        $insertStmt->bind_param("isssss", $id, $name, $location, $latitude, $longitude, $connectors);
+    $insertQuery = "INSERT INTO evadmin (id, st_name, st_loc, latitude, longitude, connectors)
+             VALUES (:id, :name, :location, :latitude, :longitude, :connectors)";
+    $insertStmt = $conn->prepare($insertQuery);
 
-        if ($insertStmt->execute()) {
+    if ($insertStmt->execute([
+      ':id' => $id,
+      ':name' => $name,
+      ':location' => $location,
+      ':latitude' => $latitude,
+      ':longitude' => $longitude,
+      ':connectors' => $connectors,
+    ])) {
             echo "<script>alert('Station added successfully!!');</script>";
         } else {
-            echo "Error: " . $insertStmt->error;
+      echo "Error: Unable to add station.";
         }
 
-        // Close the insert statement
-        $insertStmt->close();
+    $insertStmt = null;
     }
 
-    // Close the check statement
-    $stmt->close();
+  $stmt = null;
 }
 
 // Close the database connection
-$conn->close();
+$conn = null;
 ?>
 
 <!DOCTYPE html>

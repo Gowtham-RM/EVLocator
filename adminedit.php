@@ -1,50 +1,50 @@
 <?php
+require_once __DIR__ . '/db.php';
+
 // Backend logic to fetch and update station details
-
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
+$station = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_station'])) {
-    // Handle form submission to update station
-    $id = $_POST['station-id'];
-    $st_name = $_POST['station-name'];
-    $st_loc = $_POST['station-location'];
-    $latitude = $_POST['latitude'];
-    $longitude = $_POST['longitude'];
-    $connectors = $_POST['connector-types'];
+    $id = (int) ($_POST['station-id'] ?? 0);
+    $st_name = trim($_POST['station-name'] ?? '');
+    $st_loc = trim($_POST['station-location'] ?? '');
+    $latitude = trim($_POST['latitude'] ?? '');
+    $longitude = trim($_POST['longitude'] ?? '');
+    $connectors = trim($_POST['connector-types'] ?? '');
 
-    // Update station data
-    $stmt = $conn->prepare("UPDATE evadmin SET st_name = ?, st_loc = ?, latitude = ?, longitude = ?, connectors = ? WHERE id = ?");
-    $stmt->bind_param("sssssi", $st_name, $st_loc, $latitude, $longitude, $connectors, $id);
+    $stmt = $conn->prepare(
+        "UPDATE evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors
+         WHERE id = :id"
+    );
 
-    if ($stmt->execute()) {
-        // Redirect back to station list on success
+    if ($stmt->execute([
+        ':name' => $st_name,
+        ':loc' => $st_loc,
+        ':lat' => $latitude,
+        ':lng' => $longitude,
+        ':connectors' => $connectors,
+        ':id' => $id,
+    ])) {
         header("Location: adminstation.php");
         exit;
-    } else {
-        echo "Error updating record: " . $conn->error;
     }
 
-    $stmt->close();
+    echo "Error updating record.";
+    exit;
 } elseif (isset($_GET['id'])) {
-    // Fetch station data for editing
-    $id = $_GET['id'];
+    $id = (int) $_GET['id'];
 
-    $stmt = $conn->prepare("SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $station = $result->fetch_assoc();
+    $stmt = $conn->prepare("SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $station = $stmt->fetch();
 
     if (!$station) {
         echo "Station not found.";
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_station'])) {
     exit;
 }
 
-$conn->close();
+$conn = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -185,37 +185,4 @@ $conn->close();
 </body>
 </html>
 
-
-<?php
-// Backend logic to fetch station details for editing
-
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-
-    // Fetch station data
-    $stmt = $conn->prepare("SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $station = $result->fetch_assoc();
-} else {
-    header("Location: station.php"); // Redirect to station list if no ID provided
-    exit;
-}
-
-$conn->close();
-?> 
 

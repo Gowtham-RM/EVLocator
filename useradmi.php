@@ -1,20 +1,17 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "EV_charge_loc";
+require_once __DIR__ . '/db.php';
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
 // Fetch all pending requests
 $sql = "SELECT * FROM station_requests";
-$result = $conn->query($sql);
+$requests = $conn->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,14 +35,14 @@ $result = $conn->query($sql);
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()) { ?>
+            <?php foreach ($requests as $row) { ?>
                 <tr>
-                    <td><?php echo $row['id']; ?></td>
-                    <td><?php echo $row['st_name']; ?></td>
-                    <td><?php echo $row['st_loc']; ?></td>
-                    <td><?php echo $row['latitude']; ?></td>
-                    <td><?php echo $row['longitude']; ?></td>
-                    <td><?php echo $row['connectors']; ?></td>
+                    <td><?php echo htmlspecialchars($row['id']); ?></td>
+                    <td><?php echo htmlspecialchars($row['st_name']); ?></td>
+                    <td><?php echo htmlspecialchars($row['st_loc']); ?></td>
+                    <td><?php echo htmlspecialchars($row['latitude']); ?></td>
+                    <td><?php echo htmlspecialchars($row['longitude']); ?></td>
+                    <td><?php echo htmlspecialchars($row['connectors']); ?></td>
                     <td>
                         <form action="approve_request.php" method="POST" style="display: inline;">
                             <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
@@ -63,5 +60,5 @@ $result = $conn->query($sql);
 </body>
 </html>
 <?php
-$conn->close();
+$conn = null;
 ?>

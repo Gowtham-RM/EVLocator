@@ -1,17 +1,13 @@
 <?php
+require_once __DIR__ . '/db.php';
+
 // Backend logic for database connection and data fetching
-
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your MySQL root password
-$dbname = "EV_charge_loc";  // Ensure your database name is correct
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
 // Pagination logic
@@ -20,29 +16,30 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 // Sorting logic
-$sortColumn = isset($_GET['sort_column']) ? $_GET['sort_column'] : 'id';  // Default sort by id
-$sortOrder = isset($_GET['sort_order']) ? $_GET['sort_order'] : 'ASC';  // Default sort order is ascending
+$allowedColumns = ['id', 'st_name', 'st_loc', 'latitude', 'longitude', 'connectors'];
+$sortColumn = $_GET['sort_column'] ?? 'id';
+if (!in_array($sortColumn, $allowedColumns, true)) {
+    $sortColumn = 'id';
+}
+$sortOrder = strtoupper($_GET['sort_order'] ?? 'ASC');
+if (!in_array($sortOrder, ['ASC', 'DESC'], true)) {
+    $sortOrder = 'ASC';
+}
 
 // Fetch data if it's an AJAX request
 if (isset($_GET['fetch_stations'])) {
-    // Count total number of stations
-    $countSql = "SELECT COUNT(*) AS total FROM evadmin";
-    $countResult = $conn->query($countSql);
-    $countRow = $countResult->fetch_assoc();
-    $totalStations = $countRow['total'];
+    $countStmt = $conn->query("SELECT COUNT(*) AS total FROM evadmin");
+    $countRow = $countStmt->fetch();
+    $totalStations = (int) ($countRow['total'] ?? 0);
 
-    // Fetch the current page's data with sorting
-    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin 
-            ORDER BY $sortColumn $sortOrder 
-            LIMIT $limit OFFSET $offset";
-    $result = $conn->query($sql);
-
-    $stations = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $stations[] = $row;
-        }
-    }
+    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin
+            ORDER BY {$sortColumn} {$sortOrder}
+            LIMIT :limit OFFSET :offset";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $stations = $stmt->fetchAll();
 
     // Output JSON for AJAX
     header('Content-Type: application/json');
@@ -53,7 +50,7 @@ if (isset($_GET['fetch_stations'])) {
     exit; // Stop further processing for AJAX requests
 }
 
-$conn->close();
+$conn = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">

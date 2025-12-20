@@ -1,38 +1,39 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "EV_charge_loc";
+require_once __DIR__ . '/db.php';
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = get_db_connection();
+} catch (RuntimeException $e) {
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Database connection unavailable.');
 }
 
 // Capture form data
-$st_name = $_POST['st_name'];
-$st_loc = $_POST['st_loc'];
-$latitude = $_POST['latitude'];
-$longitude = $_POST['longitude'];
-$connectors = $_POST['connectors'];
+$st_name = trim($_POST['st_name'] ?? '');
+$st_loc = trim($_POST['st_loc'] ?? '');
+$latitude = trim($_POST['latitude'] ?? '');
+$longitude = trim($_POST['longitude'] ?? '');
+$connectors = trim($_POST['connectors'] ?? '');
 
-// Insert into station_requests table
-$sql = "INSERT INTO station_requests (st_name, st_loc, latitude, longitude, connectors) 
-        VALUES (?, ?, ?, ?, ?)";
+$sql = "INSERT INTO station_requests (st_name, st_loc, latitude, longitude, connectors)
+        VALUES (:name, :loc, :lat, :lng, :connectors)";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("sssss", $st_name, $st_loc, $latitude, $longitude, $connectors);
 
-if ($stmt->execute()) {
+if ($stmt->execute([
+    ':name' => $st_name,
+    ':loc' => $st_loc,
+    ':lat' => $latitude,
+    ':lng' => $longitude,
+    ':connectors' => $connectors,
+])) {
     echo "Request submitted successfully! Awaiting admin approval.";
 } else {
-    echo "Error: " . $stmt->error;
+    echo "Error: Unable to submit the request.";
 }
 
-$stmt->close();
-$conn->close();
+$stmt = null;
+$conn = null;
 ?>
 
 <!DOCTYPE html>
