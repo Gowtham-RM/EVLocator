@@ -10,7 +10,7 @@ try {
 }
 
 try {
-    $stmt = $pdo->query("SELECT * FROM users");
+    $stmt = $pdo->query("SELECT * FROM public.users");
     $users = $stmt->fetchAll();
 } catch (Throwable $e) {
     die("Failed to fetch data: " . $e->getMessage());

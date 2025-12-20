@@ -10,7 +10,7 @@ try {
 }
 
 // Fetch all pending requests
-$sql = "SELECT * FROM station_requests";
+$sql = "SELECT * FROM public.station_requests";
 $requests = $conn->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>

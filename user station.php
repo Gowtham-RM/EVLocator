@@ -16,7 +16,7 @@ $latitude = trim($_POST['latitude'] ?? '');
 $longitude = trim($_POST['longitude'] ?? '');
 $connectors = trim($_POST['connectors'] ?? '');
 
-$sql = "INSERT INTO station_requests (st_name, st_loc, latitude, longitude, connectors)
+$sql = "INSERT INTO public.station_requests (st_name, st_loc, latitude, longitude, connectors)
         VALUES (:name, :loc, :lat, :lng, :connectors)";
 $stmt = $conn->prepare($sql);
 

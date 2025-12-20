@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $longitude = trim($_POST['longitude'] ?? '');
   $connectors = trim($_POST['connector-types'] ?? '');
 
-  $checkQuery = "SELECT 1 FROM evadmin WHERE id = :id OR (latitude = :lat AND longitude = :lng) LIMIT 1";
+  $checkQuery = "SELECT 1 FROM public.evadmin WHERE id = :id OR (latitude = :lat AND longitude = :lng) LIMIT 1";
   $stmt = $conn->prepare($checkQuery);
   $stmt->execute([
     ':id' => $id,
@@ -31,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo "<script>alert('The ID or Latitude/Longitude combination already exists. Check it!');</script>";
     } else {
         // Use prepared statement to insert data into the database
-    $insertQuery = "INSERT INTO evadmin (id, st_name, st_loc, latitude, longitude, connectors)
+    $insertQuery = "INSERT INTO public.evadmin (id, st_name, st_loc, latitude, longitude, connectors)
              VALUES (:id, :name, :location, :latitude, :longitude, :connectors)";
     $insertStmt = $conn->prepare($insertQuery);
 

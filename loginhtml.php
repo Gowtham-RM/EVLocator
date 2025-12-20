@@ -13,7 +13,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $email = trim($_POST["email"] ?? '');
   $password = $_POST["password"] ?? '';
 
-  $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+  $stmt = $conn->prepare("SELECT * FROM public.users WHERE email = :email LIMIT 1");
   $stmt->execute([':email' => $email]);
   $user = $stmt->fetch();
 

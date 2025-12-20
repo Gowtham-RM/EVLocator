@@ -28,11 +28,11 @@ if (!in_array($sortOrder, ['ASC', 'DESC'], true)) {
 
 // Fetch data if it's an AJAX request
 if (isset($_GET['fetch_stations'])) {
-    $countStmt = $conn->query("SELECT COUNT(*) AS total FROM evadmin");
+    $countStmt = $conn->query("SELECT COUNT(*) AS total FROM public.evadmin");
     $countRow = $countStmt->fetch();
     $totalStations = (int) ($countRow['total'] ?? 0);
 
-    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin
+    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM public.evadmin
             ORDER BY {$sortColumn} {$sortOrder}
             LIMIT :limit OFFSET :offset";
     $stmt = $conn->prepare($sql);

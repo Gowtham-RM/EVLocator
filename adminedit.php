@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_station'])) {
     $connectors = trim($_POST['connector-types'] ?? '');
 
     $stmt = $conn->prepare(
-        "UPDATE evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors
+        "UPDATE public.evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors
          WHERE id = :id"
     );
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_station'])) {
 } elseif (isset($_GET['id'])) {
     $id = (int) $_GET['id'];
 
-    $stmt = $conn->prepare("SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin WHERE id = :id");
+    $stmt = $conn->prepare("SELECT id, st_name, st_loc, latitude, longitude, connectors FROM public.evadmin WHERE id = :id");
     $stmt->execute([':id' => $id]);
     $station = $stmt->fetch();
 

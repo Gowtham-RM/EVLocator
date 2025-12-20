@@ -12,7 +12,7 @@ try {
 
 // Fetch data if it's an AJAX request
 if (isset($_GET['fetch_stations'])) {
-    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM evadmin";
+    $sql = "SELECT id, st_name, st_loc, latitude, longitude, connectors FROM public.evadmin";
     $result = $conn->query($sql);
     $stations = $result->fetchAll();
 
@@ -25,7 +25,7 @@ if (isset($_GET['fetch_stations'])) {
 // Handle delete request
 if (isset($_GET['delete_station'])) {
     $id = (int) $_GET['delete_station'];
-    $deleteQuery = "DELETE FROM evadmin WHERE id = :id";
+    $deleteQuery = "DELETE FROM public.evadmin WHERE id = :id";
     $stmt = $conn->prepare($deleteQuery);
     $stmt->execute([':id' => $id]);
     echo json_encode(['success' => true]);
@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_station'])) {
     $longitude = trim($_POST['longitude'] ?? '');
     $connectors = trim($_POST['connector-types'] ?? '');
 
-    $updateQuery = "UPDATE evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors WHERE id = :id";
+    $updateQuery = "UPDATE public.evadmin SET st_name = :name, st_loc = :loc, latitude = :lat, longitude = :lng, connectors = :connectors WHERE id = :id";
     $stmt = $conn->prepare($updateQuery);
     $stmt->execute([
         ':name' => $name,

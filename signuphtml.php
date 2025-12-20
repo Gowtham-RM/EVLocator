@@ -19,15 +19,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $state = trim($_POST["state"] ?? '');
   $zip = trim($_POST["zip"] ?? '');
 
-  $checkEmail = $conn->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+  $checkEmail = $conn->prepare("SELECT id FROM public.users WHERE email = :email LIMIT 1");
   $checkEmail->execute([':email' => $email]);
 
   if ($checkEmail->fetch()) {
     echo "<script>alert('Email already exists. Please use another email.');</script>";
   } else {
-    $stmt = $conn->prepare(
-      "INSERT INTO users (username, email, password, vehicle_type, connector_type, city, state, zip)
-       VALUES (:username, :email, :password, :vehicle_type, :connector_type, :city, :state, :zip)"
+      $stmt = $conn->prepare(
+        "INSERT INTO public.users (username, email, password, vehicle_type, connector_type, city, state, zip)
+         VALUES (:username, :email, :password, :vehicle_type, :connector_type, :city, :state, :zip)"
     );
 
     if ($stmt->execute([

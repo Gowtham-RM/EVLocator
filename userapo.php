@@ -21,13 +21,13 @@ if ($id <= 0) {
 }
 
 if ($action === "approve") {
-    $sql = "INSERT INTO evadmin (st_name, st_loc, latitude, longitude, connectors)
+        $sql = "INSERT INTO public.evadmin (st_name, st_loc, latitude, longitude, connectors)
             SELECT st_name, st_loc, latitude, longitude, connectors 
-            FROM station_requests WHERE id = :id";
+            FROM public.station_requests WHERE id = :id";
     $stmt = $conn->prepare($sql);
 
     if ($stmt->execute([':id' => $id])) {
-        $deleteSql = "DELETE FROM station_requests WHERE id = :id";
+        $deleteSql = "DELETE FROM public.station_requests WHERE id = :id";
         $deleteStmt = $conn->prepare($deleteSql);
 
         if ($deleteStmt->execute([':id' => $id])) {
@@ -42,7 +42,7 @@ if ($action === "approve") {
     }
     $stmt = null;
 } elseif ($action === "reject") {
-    $sql = "DELETE FROM station_requests WHERE id = :id";
+    $sql = "DELETE FROM public.station_requests WHERE id = :id";
     $stmt = $conn->prepare($sql);
 
     if ($stmt->execute([':id' => $id])) {

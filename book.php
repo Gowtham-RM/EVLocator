@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email'] ?? '');
 
     $stmt = $conn->prepare(
-        "SELECT 1 FROM slot WHERE (phone_number = :phone OR email = :email) AND booking_date = :date AND time_slot = :slot LIMIT 1"
+        "SELECT 1 FROM public.slot WHERE (phone_number = :phone OR email = :email) AND booking_date = :date AND time_slot = :slot LIMIT 1"
     );
     $stmt->execute([
         ':phone' => $phone_number,
@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo "<script>alert('You have already made a booking for this time slot. Please choose a different time or modify your existing booking.');</script>";
     } else {
         $stmt = $conn->prepare(
-            "INSERT INTO slot (ev_type, ev_make, booking_date, time_slot, charging_type, phone_number, email)
+            "INSERT INTO public.slot (ev_type, ev_make, booking_date, time_slot, charging_type, phone_number, email)
              VALUES (:ev_type, :ev_make, :booking_date, :time_slot, :charging_type, :phone_number, :email)
              RETURNING slot_id"
         );
@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 if (isset($_GET['id'])) {
     $slot_id = $_GET['id'];
 
-    $stmt = $conn->prepare("SELECT * FROM slot WHERE slot_id = :id");
+    $stmt = $conn->prepare("SELECT * FROM public.slot WHERE slot_id = :id");
     $stmt->execute([':id' => $slot_id]);
     $row = $stmt->fetch() ?: null;
 }

@@ -16,7 +16,7 @@ try {
     exit('Database connection unavailable.');
 }
 
-$stmt = $conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+$stmt = $conn->prepare('SELECT * FROM public.users WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $user_id]);
 $row = $stmt->fetch();
 
