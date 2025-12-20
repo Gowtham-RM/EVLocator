@@ -165,7 +165,7 @@
         <header class="header">
             <div class="brand-container">
                 <a class="navbar-brand" href="#">
-                    <img src="logo.png" alt="Logo" style="width:50px;" class="hi">
+                    <img src="logo.PNG" alt="Logo" style="width:50px;" class="hi">
                 </a>
                 <h2 class="funky-text">EV Charging Station Locator</h2>
             </div>
