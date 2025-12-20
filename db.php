@@ -9,7 +9,12 @@ function get_db_connection(): PDO
     $databaseUrl = getenv('DATABASE_URL');
 
     if ($databaseUrl) {
-        $parts = parse_url($databaseUrl);
+        $cleanUrl = trim($databaseUrl);
+        if (str_starts_with($cleanUrl, 'psql ')) {
+            $cleanUrl = substr($cleanUrl, 5);
+        }
+        $cleanUrl = trim($cleanUrl, "'\"");
+        $parts = parse_url($cleanUrl);
         if ($parts === false) {
             throw new RuntimeException('Invalid DATABASE_URL.');
         }
@@ -20,7 +25,25 @@ function get_db_connection(): PDO
         $password = $parts['pass'] ?? '';
         $database = ltrim($parts['path'] ?? '', '/');
 
-        $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s;sslmode=require', $host, $port, $database);
+        $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);
+
+        $hasSslMode = false;
+        if (!empty($parts['query'])) {
+            parse_str($parts['query'], $queryParams);
+            foreach ($queryParams as $key => $value) {
+                if ($value === null || $value === '') {
+                    continue;
+                }
+                if (strtolower($key) === 'sslmode') {
+                    $hasSslMode = true;
+                }
+                $dsn .= sprintf(';%s=%s', $key, $value);
+            }
+        }
+
+        if (!$hasSslMode) {
+            $dsn .= ';sslmode=require';
+        }
 
         return new PDO($dsn, $user, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
